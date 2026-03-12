@@ -1,0 +1,52 @@
+# -----------------------------
+# Rust / Cargo
+# -----------------------------
+/target/
+**/target/
+**/*.rs.bk
+
+# Keep Cargo.lock committed for binaries/workspaces.
+# Uncomment the next line only for library-only repositories.
+# Cargo.lock
+
+# -----------------------------
+# Solana / Anchor
+# -----------------------------
+.anchor/
+test-ledger/
+solana-test-validator/
+solana-test-validator-ledger/
+**/target/deploy/
+**/target/idl/
+**/target/types/
+**/*-keypair.json
+
+# -----------------------------
+# Local secrets / env
+# -----------------------------
+.env
+.env.*
+!.env.example
+id.json
+
+# -----------------------------
+# Frontend toolchains (if used)
+# -----------------------------
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+.svelte-kit/
+coverage/
+
+# -----------------------------
+# Editors / OS
+# -----------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
