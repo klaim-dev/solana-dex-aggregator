@@ -1,5 +1,8 @@
+use axum::routing::post;
 use axum::{routing::get, Router};
 use axum::Json;
+use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 use crate::error::AppError;
 mod error;
@@ -22,6 +25,7 @@ Router::new()
     .route("/healthz", get(healthz))
     .route("/readyz", get(readyz))
     .route("/status", get(status))
+    .route("/account", post(account))
    
 }
 
@@ -35,6 +39,21 @@ async fn readyz() -> Result<&'static str, AppError> {
 
 async fn status() -> Result<Json<serde_json::Value>, AppError> {
     Ok(Json(serde_json::json!({ "status": "ok", "version": "0.1.0" })))
+}
+
+#[derive(Debug, Validate, Serialize, Deserialize)]
+pub struct AccountRequest {
+    #[validate(length(max = 44))]
+    pubkey: String,
+    #[validate(length(max = 32))]
+    label: String,
+    #[validate(range(min = 0, max = 1000000))]
+    amount: u64,
+}
+
+async fn account(Json(input): Json<AccountRequest>) -> Result<Json<AccountRequest>, AppError> {
+    input.validate().map_err(|_| AppError::BadRequest { input: "invalid input".to_string() })?;
+    Ok(Json(input))
 }
 
 
@@ -88,6 +107,76 @@ async fn test_status() {
     assert_eq!(json["status"], "ok");
     assert_eq!(json["version"], "0.1.0");
 }
+
+#[tokio::test]
+async fn test_account_returns_400() {
+    let app = create_app();
+
+    let payload = serde_json::json!({
+    "pubkey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "label": "test",
+    "amount": 100,
+});
+    
+    let response = app
+    .oneshot(Request::builder()
+    .method("POST")
+    .uri("/account")
+    .header("content-type", "application/json")
+    .body(Body::from(serde_json::to_string(&payload).unwrap()))
+    .unwrap())
+        .await
+        .unwrap();
+    
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_account_returns_400_lable_lenght_than_32() {
+    let app = create_app();
+
+    let payload = serde_json::json!({
+    "pubkey": "aaaa",
+    "label": "testtesttesttesttesttesttesttesttesttesttesttesttest",
+    "amount": 100,
+});
+    
+    let response = app
+    .oneshot(Request::builder()
+    .method("POST")
+    .uri("/account")
+    .header("content-type", "application/json")
+    .body(Body::from(serde_json::to_string(&payload).unwrap()))
+    .unwrap())
+        .await
+        .unwrap();
+    
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_account_returns_400_lable_amount_invalid_range() {
+    let app = create_app();
+
+    let payload = serde_json::json!({
+    "pubkey": "aaaa",
+    "label": "test",
+    "amount": 2000000,
+});
+    
+    let response = app
+    .oneshot(Request::builder()
+    .method("POST")
+    .uri("/account")
+    .header("content-type", "application/json")
+    .body(Body::from(serde_json::to_string(&payload).unwrap()))
+    .unwrap())
+        .await
+        .unwrap();
+    
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
 
 }
 
