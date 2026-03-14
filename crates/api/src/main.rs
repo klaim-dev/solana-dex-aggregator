@@ -1,15 +1,24 @@
+use axum::extract::State;
 use axum::routing::post;
 use axum::{routing::get, Router};
 use axum::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+use dotenvy::{self, dotenv};
+use std::sync::Arc;
 
 use crate::error::AppError;
+use crate::state::{AppState, Config};
 mod error;
+mod state;
 
 #[tokio::main]
 async fn main() {
-    let app = create_app();
+   dotenv().ok();
+
+    let config = Config::from_env().unwrap();
+
+    let app = create_app(config);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
@@ -18,15 +27,19 @@ async fn main() {
     axum::serve(listener, app)
         .await
         .expect("api server crashed");
+
 }
 
-fn create_app() -> Router {
+
+fn create_app(config: Config) -> Router {
+    let state = Arc::new(AppState{config});
 Router::new()
     .route("/healthz", get(healthz))
     .route("/readyz", get(readyz))
     .route("/status", get(status))
     .route("/account", post(account))
-   
+    .with_state(state)
+
 }
 
 async fn healthz() -> Result<&'static str, AppError> {
@@ -37,8 +50,9 @@ async fn readyz() -> Result<&'static str, AppError> {
     Ok("Ok")
 }
 
-async fn status() -> Result<Json<serde_json::Value>, AppError> {
-    Ok(Json(serde_json::json!({ "status": "ok", "version": "0.1.0" })))
+async fn status(State(state): State<Arc<AppState>>) -> Result<Json<serde_json::Value>, AppError> {
+let solana_rpc_client = state.config.get_solana_rpc_client();
+    Ok(Json(serde_json::json!({ "status": "ok", "version": "0.1.0", "solana_rpc_client": solana_rpc_client })))
 }
 
 #[derive(Debug, Validate, Serialize, Deserialize)]
@@ -65,10 +79,12 @@ mod tests {
     use axum::body::Body;
     use http_body_util::BodyExt;
     use axum::http::StatusCode;
+
     
 #[tokio::test]
 async fn test_healthz_returns_200() {
-    let app = create_app();
+    let config = Config::from_env().unwrap();
+    let app = create_app(config);
     
     let response = app
         .oneshot(Request::builder().uri("/healthz").body(Body::empty()).unwrap())
@@ -80,8 +96,9 @@ async fn test_healthz_returns_200() {
 
 #[tokio::test]
 async fn test_readyz_returns_200() {
-    let app = create_app();
-    
+    let config = Config::from_env().unwrap();
+    let app = create_app(config);
+
     let response = app
         .oneshot(Request::builder().uri("/readyz").body(Body::empty()).unwrap())
         .await
@@ -92,8 +109,9 @@ async fn test_readyz_returns_200() {
 
 #[tokio::test]
 async fn test_status() {
-    let app = create_app();
-    
+    let config = Config::from_env().unwrap();
+    let app = create_app(config);
+
     let response = app
         .oneshot(Request::builder().uri("/status").body(Body::empty()).unwrap())
         .await
@@ -110,7 +128,8 @@ async fn test_status() {
 
 #[tokio::test]
 async fn test_account_returns_400() {
-    let app = create_app();
+    let config = Config::from_env().unwrap();
+    let app = create_app(config);
 
     let payload = serde_json::json!({
     "pubkey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -133,7 +152,8 @@ async fn test_account_returns_400() {
 
 #[tokio::test]
 async fn test_account_returns_400_lable_lenght_than_32() {
-    let app = create_app();
+    let config = Config::from_env().unwrap();
+    let app = create_app(config);
 
     let payload = serde_json::json!({
     "pubkey": "aaaa",
@@ -156,7 +176,8 @@ async fn test_account_returns_400_lable_lenght_than_32() {
 
 #[tokio::test]
 async fn test_account_returns_400_lable_amount_invalid_range() {
-    let app = create_app();
+    let config = Config::from_env().unwrap();
+    let app = create_app(config);
 
     let payload = serde_json::json!({
     "pubkey": "aaaa",
