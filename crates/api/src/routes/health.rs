@@ -1,12 +1,13 @@
-use axum::{response::IntoResponse, Json};
+use axum::{response::IntoResponse, Json, extract::State};
 use serde::Serialize;
 
-use crate::error::AppError;
+use crate::{error::AppError, state::AppState};
 
 #[derive(Debug, Serialize)]
 pub struct StatusResponse {
     name: String,
     version: String,
+    solana_rpc_url: String,
 }
 
 pub async fn healthz() -> Result<impl IntoResponse, AppError> {
@@ -17,12 +18,13 @@ pub async fn readyz() -> Result<impl IntoResponse, AppError> {
     Ok("ready")
 }
 
-pub async fn status() -> Result<Json<StatusResponse>, AppError> {
+pub async fn status(State(state): State<AppState>) -> Json<StatusResponse> {
     let response = StatusResponse {
         name: "api".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
+        solana_rpc_url: state.config.solana_rpc_url.clone(),
     };
-    Ok(Json(response))
+    Json(response)
 }
 
 #[cfg(test)]
@@ -34,14 +36,17 @@ mod tests {
     };
     use tower::ServiceExt;
 
-    use crate::app;
+    use crate::{app, config::Config};
     use axum::body::to_bytes;
+    use std::sync::Arc;
 
     use super::*;
 
     #[tokio::test]
     async fn healthz_returns_200() {
-        let app = app();
+       let config = Arc::new(Config{solana_rpc_url: "a".to_string(), database_url: "a".to_string(), jwt_secret: "a".to_string() });
+        let state = crate::state::AppState {config};
+        let app = app(state);
         let request = Request::builder()
             .uri("/healthz")
             .body(Body::empty())

@@ -46,6 +46,8 @@ mod tests {
     };
     use tower::ServiceExt;
     use validator::Validate;
+    use crate::config::Config;
+    use std::sync::Arc;
 
     use crate::{app, routes::accounts::CreateAccountRequest};
 
@@ -72,7 +74,10 @@ mod tests {
             ))
             .unwrap();
 
-        let response = app().oneshot(request).await.unwrap();
+        let config = Arc::new(Config{solana_rpc_url: "a".to_string(), database_url: "a".to_string(), jwt_secret: "a".to_string() });
+        let state = crate::state::AppState {config};
+
+        let response = app(state).oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY)
     }
 
@@ -85,7 +90,10 @@ mod tests {
         .body(Body::from(r#"{"label":"sol", "pubkey":"6HTpFxctmd8qm5a5gxjHztsnfKyMJQxmafLCgzpLfzes","lamports":300}"#))
         .unwrap();
 
-        let response = app().oneshot(request).await.unwrap();
+        let config = Arc::new(Config{solana_rpc_url: "a".to_string(), database_url: "a".to_string(), jwt_secret: "a".to_string() });
+        let state = crate::state::AppState {config};
+
+        let response = app(state).oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::CREATED)
     }
 
@@ -98,7 +106,10 @@ mod tests {
         .body(Body::from(r#"{"label":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","pubkey":"6HTpFxctmd8qm5a5gxjHztsnfKyMJQxmafLCgzpLfzes","lamports":300}"#))
         .unwrap();
 
-        let response = app().oneshot(request).await.unwrap();
+        let config = Arc::new(Config{solana_rpc_url: "a".to_string(), database_url: "a".to_string(), jwt_secret: "a".to_string() });
+        let state = crate::state::AppState {config};
+
+        let response = app(state).oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST)
     }
 
@@ -111,7 +122,10 @@ mod tests {
         .body(Body::from(r#"{"label":"sol","pubkey":"6HTpFxctmd8qm5a5gxjHztsnfKyMJQxmafLCgzpLfz111","lamports":300}"#))
         .unwrap();
 
-        let response = app().oneshot(request).await.unwrap();
+       let config = Arc::new(Config{solana_rpc_url: "a".to_string(), database_url: "a".to_string(), jwt_secret: "a".to_string() });
+        let state = crate::state::AppState {config};
+
+        let response = app(state).oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST)
     }
 }

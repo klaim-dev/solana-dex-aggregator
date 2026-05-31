@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 axum = "0.8.9"
+dotenvy = "0.15.7"
 serde = { version = "1.0.228", features = ["derive"] }
 solana-sdk = "4.0.1"
 thiserror = "2.0.18"
