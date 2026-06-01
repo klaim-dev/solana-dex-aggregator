@@ -1,4 +1,4 @@
-use axum::{response::IntoResponse, Json, extract::State};
+use axum::{extract::State, response::IntoResponse, Json};
 use serde::Serialize;
 
 use crate::{error::AppError, state::AppState};
@@ -36,17 +36,27 @@ mod tests {
     };
     use tower::ServiceExt;
 
-    use crate::{app, config::Config};
     use axum::body::to_bytes;
     use std::sync::Arc;
 
+    use crate::{app, config::Config, infra::repo::in_memory::InMemoryAccountRepo};
+
     use super::*;
+
+    fn test_state() -> crate::state::AppState {
+        crate::state::AppState {
+            config: Arc::new(Config {
+                solana_rpc_url: "a".to_string(),
+                database_url: "a".to_string(),
+                jwt_secret: "a".to_string(),
+            }),
+            account_repo: Arc::new(InMemoryAccountRepo::new()),
+        }
+    }
 
     #[tokio::test]
     async fn healthz_returns_200() {
-       let config = Arc::new(Config{solana_rpc_url: "a".to_string(), database_url: "a".to_string(), jwt_secret: "a".to_string() });
-        let state = crate::state::AppState {config};
-        let app = app(state);
+        let app = app(test_state());
         let request = Request::builder()
             .uri("/healthz")
             .body(Body::empty())
