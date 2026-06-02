@@ -3,7 +3,6 @@ mod config;
 mod domain;
 mod error;
 mod infra;
-mod routes;
 mod state;
 use axum::{
     routing::{get, post},
@@ -28,9 +27,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 pub(crate) fn app(state: AppState) -> Router {
     Router::new()
-        .route("/healthz", get(routes::health::healthz))
-        .route("/readyz", get(routes::health::readyz))
-        .route("/status", get(routes::health::status))
-        .route("/accounts", post(routes::accounts::create_account))
+        .route("/healthz", get(infra::http::health::healthz))
+        .route("/readyz", get(infra::http::health::readyz))
+        .route("/status", get(infra::http::health::status))
+        .route("/accounts", post(infra::http::accounts::create_account))
+        .route("/accounts/{pubkey}", get(infra::http::accounts::get_account))
         .with_state(state)
 }

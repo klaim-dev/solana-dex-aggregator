@@ -6,7 +6,7 @@ use crate::domain::{AccountRepo, DomainError, SolanaAccount};
 
 #[derive(Debug)]
 pub struct InMemoryAccountRepo {
-    store: HashMap<String, SolanaAccount>,
+    pub store: HashMap<String, SolanaAccount>,
 }
 
 impl InMemoryAccountRepo {

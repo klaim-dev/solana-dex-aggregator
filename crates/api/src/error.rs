@@ -28,6 +28,17 @@ impl IntoResponse for AppError {
     }
 }
 
+use crate::domain::DomainError;
+
+impl From<DomainError> for AppError {
+    fn from(err: DomainError) -> Self {
+        match err {
+            DomainError::NotFound => AppError::NotFound,
+            DomainError::InvalidKey(msg) => AppError::BadRequest(msg),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

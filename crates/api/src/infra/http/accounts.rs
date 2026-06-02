@@ -1,12 +1,16 @@
 use std::str::FromStr;
 
+use crate::app::AccountService;
+use crate::domain::SolanaAccount;
 use crate::error::AppError;
-use axum::http::StatusCode;
+use axum::extract::Path;
+use axum::{extract::State, http::StatusCode};
 use axum::response::IntoResponse;
 use axum::Json;
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
 use validator::Validate;
+use crate::state::AppState;
 
 #[derive(Debug, Deserialize, validator::Validate)]
 pub struct CreateAccountRequest {
@@ -38,6 +42,27 @@ pub async fn create_account(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
+#[derive(Debug, Serialize)]
+pub struct AccountResponse {
+    pub pubkey: String,
+    pub owner: String,
+    pub lamports: u64,
+}
+
+impl From<SolanaAccount> for AccountResponse {
+    fn from(value: SolanaAccount) -> Self {
+        Self { pubkey: value.pubkey, owner: value.owner, lamports: value.lamports }
+    }
+}
+
+pub async fn get_account(State(state): State<AppState>, Path(pubkey):Path<String>) -> Result<Json<AccountResponse>, AppError> {
+    let repo = state.account_repo.clone();
+    let service = AccountService::new(repo);
+    let account = service.get_account(&pubkey).await?;
+    let response: AccountResponse = account.into();
+    Ok(Json(response))
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -51,7 +76,7 @@ mod tests {
 
     use crate::{
         app, config::Config, infra::repo::in_memory::InMemoryAccountRepo,
-        routes::accounts::CreateAccountRequest,
+        infra::http::accounts::CreateAccountRequest,
     };
 
     fn test_state() -> crate::state::AppState {
