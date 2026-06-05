@@ -30,7 +30,8 @@ pub(crate) fn app(state: AppState) -> Router {
         .route("/healthz", get(infra::http::health::healthz))
         .route("/readyz", get(infra::http::health::readyz))
         .route("/status", get(infra::http::health::status))
-        .route("/accounts", post(infra::http::accounts::create_account))
+        .route("/accounts", post(infra::http::accounts::create_account).get(infra::http::accounts::list_account))
         .route("/accounts/{pubkey}", get(infra::http::accounts::get_account))
+
         .with_state(state)
 }

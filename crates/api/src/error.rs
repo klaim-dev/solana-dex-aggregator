@@ -6,6 +6,8 @@ pub enum AppError {
     NotFound,
     #[error("bad request {0}")]
     BadRequest(String),
+    #[error("conflict: {0}")]
+    Conflict(String),
     #[error("internal error")]
     Internal(String),
 }
@@ -15,6 +17,7 @@ impl IntoResponse for AppError {
         let (status, body) = match self {
             AppError::NotFound => (StatusCode::NOT_FOUND, "not found".to_string()),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppError::Conflict(msg) => (StatusCode::CONFLICT, msg),
             AppError::Internal(msg) => {
                 tracing::error!("internal error: {msg}");
                 (
@@ -35,6 +38,8 @@ impl From<DomainError> for AppError {
         match err {
             DomainError::NotFound => AppError::NotFound,
             DomainError::InvalidKey(msg) => AppError::BadRequest(msg),
+            DomainError::Conflict(msg) => AppError::Conflict(msg),
+            DomainError::InvalidPubkey(msg) => AppError::BadRequest(msg),
         }
     }
 }
