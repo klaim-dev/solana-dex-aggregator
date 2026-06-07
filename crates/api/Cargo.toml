@@ -11,8 +11,8 @@ serde = { version = "1.0.228", features = ["derive"] }
 solana-sdk = "4.0.1"
 thiserror = "2.0.18"
 tokio = { version = "1.52.3", features = ["full"] }
-tracing = "0.1.44"
-validator = { version = "0.20.0", features = ["derive"] }
-
-[dev-dependencies]
 tower = { version = "0.5.3", features = ["util"] }
+tower-http = { version = "0.6.6", features = ["request-id", "trace"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter", "json"] }
+validator = { version = "0.20.0", features = ["derive"] }
