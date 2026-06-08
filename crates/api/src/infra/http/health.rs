@@ -3,13 +3,6 @@ use serde::Serialize;
 
 use crate::{error::AppError, state::AppState};
 
-#[derive(Debug, Serialize)]
-pub struct StatusResponse {
-    name: String,
-    version: String,
-    solana_rpc_url: String,
-}
-
 pub async fn healthz() -> Result<impl IntoResponse, AppError> {
     Ok("ok")
 }
@@ -18,11 +11,18 @@ pub async fn readyz() -> Result<impl IntoResponse, AppError> {
     Ok("ready")
 }
 
+#[derive(Debug, Serialize)]
+pub struct StatusResponse {
+    pub solana_rpc_url: String,
+    pub uptime_secs: u64,
+}
+
 pub async fn status(State(state): State<AppState>) -> Json<StatusResponse> {
+    let solana_rpc_url = state.config.solana_rpc_url.clone();
+    let uptime_secs = state.started_at.elapsed().as_secs();
     let response = StatusResponse {
-        name: "api".to_string(),
-        version: env!("CARGO_PKG_VERSION").to_string(),
-        solana_rpc_url: state.config.solana_rpc_url.clone(),
+        solana_rpc_url,
+        uptime_secs,
     };
     Json(response)
 }
@@ -37,9 +37,12 @@ mod tests {
     use tower::ServiceExt;
 
     use axum::body::to_bytes;
-    use std::sync::Arc;
+    use std::{sync::Arc, time::Instant};
 
-    use crate::{app, config::Config, infra::repo::in_memory::InMemoryAccountRepo};
+    use crate::{
+        app, config::Config,
+        infra::{http::metrics::metrics_handle, repo::in_memory::InMemoryAccountRepo},
+    };
 
     use super::*;
 
@@ -51,6 +54,8 @@ mod tests {
                 jwt_secret: "a".to_string(),
             }),
             account_repo: Arc::new(InMemoryAccountRepo::new()),
+            started_at: Instant::now(),
+            metrics_handle: metrics_handle(),
         }
     }
 

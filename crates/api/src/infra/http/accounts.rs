@@ -86,10 +86,13 @@ mod tests {
         http::{Request, StatusCode},
     };
     use solana_sdk::pubkey::Pubkey;
-    use std::sync::Arc;
+    use std::{sync::Arc, time::Instant};
     use tower::ServiceExt;
 
-    use crate::{app, config::Config, infra::repo::in_memory::InMemoryAccountRepo};
+    use crate::{
+        app, config::Config,
+        infra::{http::metrics::metrics_handle, repo::in_memory::InMemoryAccountRepo},
+    };
 
     fn test_state() -> crate::state::AppState {
         crate::state::AppState {
@@ -99,6 +102,8 @@ mod tests {
                 jwt_secret: "a".to_string(),
             }),
             account_repo: Arc::new(InMemoryAccountRepo::new()),
+            started_at: Instant::now(),
+            metrics_handle: metrics_handle(),
         }
     }
 
