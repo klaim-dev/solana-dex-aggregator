@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{Arc};
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use async_trait::async_trait;
@@ -13,7 +13,7 @@ pub struct InMemoryAccountRepo {
 
 impl InMemoryAccountRepo {
     pub fn new() -> Self {
-      Self::default()
+        Self::default()
     }
 }
 
@@ -37,8 +37,6 @@ impl AccountRepo for InMemoryAccountRepo {
     async fn list(&self) -> Result<Vec<SolanaAccount>, DomainError> {
         let store = self.store.read().await;
         let accounts = store.values().cloned().collect::<Vec<SolanaAccount>>();
-       Ok(accounts)
+        Ok(accounts)
     }
-
-
 }

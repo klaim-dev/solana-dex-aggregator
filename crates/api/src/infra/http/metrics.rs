@@ -1,5 +1,5 @@
-use std::time::Instant;
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
+use std::time::Instant;
 
 use axum::{
     extract::{Request, State},

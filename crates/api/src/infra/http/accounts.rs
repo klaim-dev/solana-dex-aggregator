@@ -86,11 +86,13 @@ mod tests {
         http::{Request, StatusCode},
     };
     use solana_sdk::pubkey::Pubkey;
+    use sqlx::postgres::PgPoolOptions;
     use std::{sync::Arc, time::Instant};
     use tower::ServiceExt;
 
     use crate::{
-        app, config::Config,
+        app,
+        config::Config,
         infra::{http::metrics::metrics_handle, repo::in_memory::InMemoryAccountRepo},
     };
 
@@ -104,6 +106,9 @@ mod tests {
             account_repo: Arc::new(InMemoryAccountRepo::new()),
             started_at: Instant::now(),
             metrics_handle: metrics_handle(),
+            pool: PgPoolOptions::new()
+                .connect_lazy("postgres://test:test@localhost/test")
+                .unwrap(),
         }
     }
 

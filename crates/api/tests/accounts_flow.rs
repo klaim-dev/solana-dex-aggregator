@@ -1,13 +1,15 @@
-use axum::{
-    body::{Body, to_bytes},
-    http::{Request, StatusCode},
-};
 use api::{
-    app, config::Config,
+    app,
+    config::Config,
     infra::{http::metrics::metrics_handle, repo::in_memory::InMemoryAccountRepo},
     AppState,
 };
+use axum::{
+    body::{to_bytes, Body},
+    http::{Request, StatusCode},
+};
 use solana_sdk::pubkey::Pubkey;
+use sqlx::postgres::PgPoolOptions;
 use std::{sync::Arc, time::Instant};
 use tower::ServiceExt;
 
@@ -23,6 +25,9 @@ fn test_state() -> AppState {
         account_repo: Arc::new(InMemoryAccountRepo::new()),
         started_at: Instant::now(),
         metrics_handle: metrics_handle(),
+        pool: PgPoolOptions::new()
+            .connect_lazy("postgres://test:test@localhost/test")
+            .unwrap(),
     }
 }
 
@@ -91,7 +96,6 @@ async fn get_account() {
     assert_eq!(json["pubkey"], pubkey);
 }
 
-
 #[tokio::test]
 async fn create_get_list_flow() {
     let state = test_state();
@@ -115,65 +119,70 @@ async fn create_get_list_flow() {
         )
         .await
         .unwrap();
-    assert_eq!(create_response.status(), StatusCode::CREATED);
-    pubkeys.push(pubkey);
+        assert_eq!(create_response.status(), StatusCode::CREATED);
+        pubkeys.push(pubkey);
     }
 
     for pubkey in &pubkeys {
-        let get_response = app.clone()
+        let get_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/accounts/{pubkey}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(get_response.status(), StatusCode::OK)
+    }
+
+    let list_response = app
+        .clone()
         .oneshot(
             Request::builder()
-            .method("GET")
-            .uri(format!("/accounts/{pubkey}"))
-            .body(Body::empty())
-            .unwrap(),
+                .method("GET")
+                .uri("/accounts")
+                .body(Body::empty())
+                .unwrap(),
         )
         .await
         .unwrap();
 
-    assert_eq!(get_response.status(), StatusCode::OK)
-    }
+    assert_eq!(list_response.status(), StatusCode::OK);
 
-let list_response = app.clone()
-    .oneshot(
-        Request::builder()
-            .method("GET")
-            .uri("/accounts")
-            .body(Body::empty())
-            .unwrap(),
-    )
-    .await
-    .unwrap();
-
-assert_eq!(list_response.status(), StatusCode::OK);
-
-let body = to_bytes(list_response.into_body(), usize::MAX).await.unwrap();
-let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-assert_eq!(json.as_array().unwrap().len(), 3);
-    
+    let body = to_bytes(list_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json.as_array().unwrap().len(), 3);
 }
 
 #[tokio::test]
 async fn status_reports_uptime() {
     let state = test_state();
-    let app =app(state);
+    let app = app(state);
 
-    let status_response = app.clone()
-    .oneshot(
-        Request::builder()
-        .method("GET")
-        .uri("/status")
-        .body(Body::empty())
-        .unwrap(),
-    )
-    .await
-    .unwrap();
+    let status_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri("/status")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
 
-    let body = to_bytes(status_response.into_body(), usize::MAX).await.unwrap();
+    let body = to_bytes(status_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert!(json["uptime_secs"].as_u64().is_some());
     assert!(json.get("jwt_secret").is_none());
-
 }
 
 #[tokio::test]
@@ -182,32 +191,33 @@ async fn metrics_endpoint_reports_counts() {
     let state = test_state();
     let app = app(state);
 
-
     for _ in 0..2 {
-    let list_response = app.clone()
-    .oneshot(
-        Request::builder()
-            .method("GET")
-            .uri("/accounts")
-            .body(Body::empty())
-            .unwrap(),
-    )
-    .await
-    .unwrap();
+        let list_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/accounts")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
 
-assert_eq!(list_response.status(), StatusCode::OK);
+        assert_eq!(list_response.status(), StatusCode::OK);
     }
 
-    let metrics = app.clone()
-    .oneshot(
-        Request::builder()
-        .method("GET")
-        .uri("/metrics")
-        .body(Body::empty())
-        .unwrap()
-    )
-    .await
-    .unwrap();
+    let metrics = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri("/metrics")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
 
     let body = to_bytes(metrics.into_body(), usize::MAX).await.unwrap();
     let text = std::str::from_utf8(&body).unwrap();

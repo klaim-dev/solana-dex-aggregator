@@ -1,4 +1,5 @@
 use metrics_exporter_prometheus::PrometheusHandle;
+use sqlx::PgPool;
 
 use crate::config::Config;
 use crate::domain::AccountRepo;
@@ -11,4 +12,5 @@ pub struct AppState {
     pub account_repo: Arc<dyn AccountRepo>,
     pub started_at: Instant,
     pub metrics_handle: PrometheusHandle,
+    pub pool: PgPool,
 }

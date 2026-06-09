@@ -37,10 +37,12 @@ mod tests {
     use tower::ServiceExt;
 
     use axum::body::to_bytes;
+    use sqlx::postgres::PgPoolOptions;
     use std::{sync::Arc, time::Instant};
 
     use crate::{
-        app, config::Config,
+        app,
+        config::Config,
         infra::{http::metrics::metrics_handle, repo::in_memory::InMemoryAccountRepo},
     };
 
@@ -56,6 +58,9 @@ mod tests {
             account_repo: Arc::new(InMemoryAccountRepo::new()),
             started_at: Instant::now(),
             metrics_handle: metrics_handle(),
+            pool: PgPoolOptions::new()
+                .connect_lazy("postgres://test:test@localhost/test")
+                .unwrap(),
         }
     }
 

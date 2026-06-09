@@ -24,7 +24,9 @@ impl Config {
     }
 
     pub fn from_env() -> Result<Config, ConfigError> {
-        dotenvy::dotenv().ok();
+        dotenvy::dotenv()
+            .or_else(|_| dotenvy::from_filename("crates/api/.env"))
+            .ok();
         Self::from_source(|key| std::env::var(key).ok())
     }
 }
